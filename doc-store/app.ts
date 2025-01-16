@@ -70,11 +70,17 @@ const getDocument = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxy
     }
 }
 
+/**
+ * Add new line to the existing document.
+ */
 const addDocument = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+    const { body } = event;
+    // TODO Validate body with JSON schema
+    // TODO Add line to the document if it's a valid structure
     return {
         statusCode: 200,
         body: JSON.stringify({
-            message: 'Hello poster', 
+            message: `Echo ${body}`,
         }),
     };
 }
