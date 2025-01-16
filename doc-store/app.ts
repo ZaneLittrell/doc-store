@@ -1,4 +1,11 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+
+/** S3 client object. */
+const client = new S3Client({});
+
+const S3_BUCKET = 'doc-store-documents';
+const S3_KEY = 'list.txt';
 
 /**
  *
@@ -24,13 +31,43 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
     };
 };
 
+/**
+ * Get document from S3 bucket.
+ */
 const getDocument = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    return {
-        statusCode: 200,
-        body: JSON.stringify({
-            message: 'Hello world!',
-        }),
-    };
+    try {
+        const input = {
+            'Bucket': S3_BUCKET,
+            'Key': S3_KEY,
+        };
+        const command = new GetObjectCommand(input);
+        const response = await client.send(command);
+        if (response != null) {
+            const bodyStr = await readBody(response.Body);
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    length: response.ContentLength,
+                    type: response.ContentType,
+                    message: bodyStr
+                }),
+            };
+        }
+        return {
+            statusCode: 404,
+            body: JSON.stringify({
+                message: 'File does not exist in bucket.'
+            }),
+        };
+    } catch (e) {
+        console.error(e);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                message: 'Internal error occurred, check logs.',
+            }),
+        };
+    }
 }
 
 const addDocument = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -40,4 +77,25 @@ const addDocument = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxy
             message: 'Hello poster', 
         }),
     };
+}
+
+/**
+ * Read the contents of the body from S3 into a string.
+ *
+ * @param body {Readable} Readable stream from the S3 object.
+ * @returns Promise resolving into a string.
+ */
+const readBody = async (body: Readable): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        let output = '';
+        body.on('readable', () => {
+            output += body.read();
+        });
+        body.on('end', () => {
+            resolve(output);
+        });
+        body.on('error', () => {
+            reject('Error occurred');
+        });
+    });
 }

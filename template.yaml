@@ -38,6 +38,29 @@ Resources:
         Sourcemap: true
         EntryPoints: 
         - app.ts
+  DocumentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "doc-store-documents"
+      VersioningConfiguration:
+        Status: "Enabled"
+  # Give access for Lambda to access the S3 bucket
+  DocumentBucketPolicy:
+    Type: AWS::IAM::RolePolicy
+    Properties:
+      PolicyName: "DocumentBucketAccess"
+      RoleName: !Ref DocStoreFunctionRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 's3:GetObject'
+            Effect: Allow
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref DocumentBucket
+                - /*
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
