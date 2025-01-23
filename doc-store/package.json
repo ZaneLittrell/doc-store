@@ -1,10 +1,9 @@
 {
-  "name": "hello_world",
+  "name": "doc_store",
   "version": "1.0.0",
-  "description": "hello world sample for NodeJS",
+  "description": "Document store REST API",
   "main": "app.js",
-  "repository": "https://github.com/awslabs/aws-sam-cli/tree/develop/samcli/local/init/templates/cookiecutter-aws-sam-hello-nodejs",
-  "author": "SAM CLI",
+  "author": "Zane Littrell",
   "license": "MIT",
   "scripts": {
     "unit": "jest",
