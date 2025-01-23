@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 
 /** S3 client object. */
 const client = new S3Client({});
@@ -76,13 +76,42 @@ const getDocument = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 const addDocument = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     const { body } = event;
     // TODO Validate body with JSON schema
-    // TODO Add line to the document if it's a valid structure
-    return {
-        statusCode: 200,
-        body: JSON.stringify({
-            message: `Echo ${body}`,
-        }),
-    };
+    try {
+        const input = {
+            Bucket: S3_BUCKET,
+            Key: S3_KEY,
+            ContentType: 'text/plain',
+        };
+        const command = new GetObjectCommand(input);
+        const response = await client.send(command);
+        if (response == null) {
+            throw new Error('No file found in bucket');
+        }
+        let bodyStr = await readBody(response.Body);
+        // Append body to the file
+        bodyStr = `${bodyStr}${body}\n`;
+        const putInput = {
+            Bucket: S3_BUCKET,
+            Key: S3_KEY,
+            Body: bodyStr,
+        };
+        const putCommand = new PutObjectCommand(putInput);
+        await client.send(putCommand);
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                message: `Appended ${body} to the file.`,
+            }),
+        };
+    } catch(e) {
+        console.error(e);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                message: 'Internal error occurred, check logs.',
+            }),
+        };
+    }
 }
 
 /**
@@ -95,7 +124,10 @@ const readBody = async (body: Readable): Promise<string> => {
     return new Promise((resolve, reject) => {
         let output = '';
         body.on('readable', () => {
-            output += body.read();
+            const chunk = body.read();
+            if (chunk != null) {
+                output += chunk;
+            }
         });
         body.on('end', () => {
             resolve(output);
